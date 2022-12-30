@@ -13,7 +13,7 @@ exp ::= i | x | `this` | `true` | `false` |
         `(` `.` exp m exp* `)` | // call a method
         `(` op exp exp `)`       // binary operation
 op ::= `+` | `*` | `<` | `&&` | `||`
-stmt ::= `(` `vardec` x type exp `)` | // variable declaration
+stmt ::= `(` `vardec` type x exp `)` | // variable declaration
          `(` `=` x exp `)` |           // assignment
          `(` `while` exp stmt `)` |    // while loops
          `(` `progn` stmt* `)` |       // sequencing statements
@@ -24,7 +24,7 @@ param ::= `(` type x `)`
 consdef ::= `(` `init` `(` param* `)` `(` `super` exp* `)` stmt `)`
 classdef ::= `(` `class` cls consdef methoddef* `)`
 methoddef ::= `(` `method` type m `(` param* `)` stmt `)`
-program ::= stmt
+program ::= classdef* stmt
 ```
 
 ## Tokens ##
@@ -56,3 +56,39 @@ program ::= stmt
 - SuperToken: 22
 - ClassToken: 23
 - MethodToken: 24
+
+## AST ##
+
+- Variable(String)
+- ClassName(String)
+- MethodName(String)
+- Type
+  - IntType: 0
+  - BoolType: 1
+  - ClassType(ClassName)
+- Exp
+  - IntLiteralExp(int)
+  - VariableExp(Variable)
+  - BooleanLiteralExp(boolean)
+  - NewExp(ClassName, List<Exp>)
+  - CallExp(Exp, MethodName, List<Exp>)
+  - BinaryOpExp(Op, Exp, Exp)
+- Op
+  - PlusOp: 0
+  - MultOp: 1
+  - LessThanOp: 2
+  - LogicalAndOp: 3
+  - LogicalOrOp: 4
+- Stmt
+  - VardecStmt(Type, Variable, Exp)
+  - AssignStmt(Variable, Exp)
+  - WhileStmt(Exp, Stmt)
+  - PrognStmt(List<Stmt>)
+  - PrintStmt(Exp)
+  - IfStmt(Exp, Stmt, Stmt)
+  - ReturnStmt(Exp)
+- Param(Type, Variable)
+- ConsDef(List<Param>, List<Exp>, Stmt)
+- ClassDef(ClassName, ConsDef, List<MethodDef>)
+- MethodDef(Type, MethodName, List<Param>, Stmt)
+- Program(List<ClassDef>, Stmt)
