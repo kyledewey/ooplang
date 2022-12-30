@@ -4,6 +4,7 @@ import ooplang.tokenizer.*;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class Parser {    
     public final Token[] tokens;
@@ -84,6 +85,14 @@ public class Parser {
         }
     }
 
+    public ParseResult<Optional<ClassName>> parseOptionalClassName(final int position) throws ParseException {
+        return new Disjunct<ClassName>() {
+            public ParseResult<ClassName> parse(final int position) throws ParseException {
+                return parseClassName(position);
+            }
+        }.optional().parse(position);
+    }
+    
     public ParseResult<ClassName> parseClassName(final int position) throws ParseException {
         final Token token = getToken(position);
         if (token instanceof IdentifierToken) {
@@ -269,14 +278,16 @@ public class Parser {
     }
     
     public ParseResult<ClassDef> parseClassDef(final int position) throws ParseException {
-        // classdef ::= `(` `class` cls consdef methoddef* `)`
+        // classdef ::= `(` `class` cls [cls] consdef methoddef* `)`
         assertTokenHereIs(position, new LeftParenToken());
         assertTokenHereIs(position + 1, new ClassToken());
         final ParseResult<ClassName> className = parseClassName(position + 2);
-        final ParseResult<ConsDef> consDef = parseConsDef(className.nextPosition);
+        final ParseResult<Optional<ClassName>> extendsName = parseOptionalClassName(className.nextPosition);
+        final ParseResult<ConsDef> consDef = parseConsDef(extendsName.nextPosition);
         final ParseResult<List<MethodDef>> methodDefs = parseMethodDefs(consDef.nextPosition);
         assertTokenHereIs(methodDefs.nextPosition, new RightParenToken());
         return new ParseResult<ClassDef>(new ClassDef(className.result,
+                                                      extendsName.result,
                                                       consDef.result,
                                                       methodDefs.result),
                                          methodDefs.nextPosition + 1);

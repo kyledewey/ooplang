@@ -2,11 +2,28 @@ package ooplang.parser;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Optional;
 
 // used for doing OR in a grammar
 public abstract class Disjunct<A> {
     public abstract ParseResult<A> parse(final int position) throws ParseException;
 
+    public Disjunct<Optional<A>> optional() {
+        final Disjunct<A> self = this;
+        return new Disjunct<Optional<A>>() {
+            public ParseResult<Optional<A>> parse(final int position) {
+                try {
+                    final ParseResult<A> a = self.parse(position);
+                    return new ParseResult<Optional<A>>(Optional.of(a.result),
+                                                        a.nextPosition);
+                } catch (final ParseException e) {
+                    return new ParseResult<Optional<A>>(Optional.empty(),
+                                                        position);
+                }
+            }
+        };
+    }
+    
     public Disjunct<List<A>> star() {
         final Disjunct<A> self = this;
         return new Disjunct<List<A>>() {

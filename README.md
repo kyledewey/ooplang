@@ -22,7 +22,7 @@ stmt ::= `(` `vardec` type x exp `)` | // variable declaration
          `(` `return` exp `)`          // return from methods
 param ::= `(` type x `)`
 consdef ::= `(` `init` `(` param* `)` `(` `super` exp* `)` stmt `)`
-classdef ::= `(` `class` cls consdef methoddef* `)`
+classdef ::= `(` `class` cls [cls] consdef methoddef* `)`
 methoddef ::= `(` `method` type m `(` param* `)` stmt `)`
 program ::= classdef* stmt
 ```
