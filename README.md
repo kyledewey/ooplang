@@ -70,6 +70,7 @@ program ::= classdef* stmt
   - IntLiteralExp(int)
   - VariableExp(Variable)
   - BooleanLiteralExp(boolean)
+  - ThisExp: 0
   - NewExp(ClassName, List<Exp>)
   - CallExp(Exp, MethodName, List<Exp>)
   - BinaryOpExp(Op, Exp, Exp)
