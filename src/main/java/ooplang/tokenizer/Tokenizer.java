@@ -24,6 +24,7 @@ public class Tokenizer {
             put("super", new SuperToken());
             put("class", new ClassToken());
             put("method", new MethodToken());
+            put("call", new CallToken());
         }};
 
     public static final List<Pair<String, Token>> SYMBOLS =

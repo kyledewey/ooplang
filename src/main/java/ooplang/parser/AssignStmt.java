@@ -1,12 +1,12 @@
 package ooplang.parser;
 
 public class AssignStmt implements Stmt {
-    public final Variable variable;
+    public final Lhs lhs;
     public final Exp exp;
 
-    public AssignStmt(final Variable variable,
+    public AssignStmt(final Lhs lhs,
                       final Exp exp) {
-        this.variable = variable;
+        this.lhs = lhs;
         this.exp = exp;
     }
 
@@ -14,7 +14,7 @@ public class AssignStmt implements Stmt {
     public boolean equals(final Object other) {
         if (other instanceof AssignStmt) {
             final AssignStmt asAssign = (AssignStmt)other;
-            return (variable.equals(asAssign.variable) &&
+            return (lhs.equals(asAssign.lhs) &&
                     exp.equals(asAssign.exp));
         } else {
             return false;
@@ -23,13 +23,13 @@ public class AssignStmt implements Stmt {
 
     @Override
     public int hashCode() {
-        return variable.hashCode() + exp.hashCode();
+        return lhs.hashCode() + exp.hashCode();
     }
 
     @Override
     public String toString() {
         return ("AssignStmt(" +
-                variable.toString() + ", " +
+                lhs.toString() + ", " +
                 exp.toString() + ")");
     }
 }

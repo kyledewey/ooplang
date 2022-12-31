@@ -1,9 +1,11 @@
 package ooplang.parser;
 
 import java.util.List;
+import java.util.Optional;
 
 public class CallExp implements Exp {
     public final Exp target;
+    public Optional<ClassType> targetType; // needed for codegen
     public final MethodName methodName;
     public final List<Exp> exps;
 
@@ -11,6 +13,7 @@ public class CallExp implements Exp {
                    final MethodName methodName,
                    final List<Exp> exps) {
         this.target = target;
+        targetType = Optional.empty();
         this.methodName = methodName;
         this.exps = exps;
     }

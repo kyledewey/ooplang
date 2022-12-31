@@ -131,14 +131,21 @@ public class Parser {
                                         position + 1);
         } else if (token instanceof LeftParenToken) {
             final Token nextToken = getToken(position + 1);
-            if (nextToken instanceof NewToken) {
+            if (nextToken instanceof DotToken) {
+                final ParseResult<Exp> exp = parseExp(position + 2);
+                final ParseResult<Variable> field = parseVariable(exp.nextPosition);
+                assertTokenHereIs(field.nextPosition, new RightParenToken());
+                return new ParseResult<Exp>(new AccessExp(exp.result,
+                                                          field.result),
+                                            field.nextPosition + 1);
+            } else if (nextToken instanceof NewToken) {
                 final ParseResult<ClassName> className = parseClassName(position + 2);
                 final ParseResult<List<Exp>> exps = parseExps(className.nextPosition);
                 assertTokenHereIs(exps.nextPosition, new RightParenToken());
                 return new ParseResult<Exp>(new NewExp(className.result,
                                                        exps.result),
                                             exps.nextPosition + 1);
-            } else if (nextToken instanceof DotToken) {
+            } else if (nextToken instanceof CallToken) {
                 final ParseResult<Exp> target = parseExp(position + 2);
                 final ParseResult<MethodName> method = parseMethodName(target.nextPosition);
                 final ParseResult<List<Exp>> params = parseExps(method.nextPosition);
@@ -162,6 +169,32 @@ public class Parser {
         }
     } // parseExp
 
+    public ParseResult<Lhs> parseLhs(final int position) throws ParseException {
+        final Token token = getToken(position);
+        if (token instanceof IdentifierToken) {
+            return new ParseResult<Lhs>(new VariableLhs(new Variable(((IdentifierToken)token).name)),
+                                        position + 1);
+        } else if (token instanceof LeftParenToken) {
+            assertTokenHereIs(position + 1, new DotToken());
+            final Token nextToken = getToken(position + 2);
+            if (token instanceof ThisToken) {
+                final ParseResult<Variable> variable = parseVariable(position + 3);
+                assertTokenHereIs(variable.nextPosition, new RightParenToken());
+                return new ParseResult<Lhs>(new AccessThisLhs(variable.result),
+                                            variable.nextPosition + 1);
+            } else {
+                final ParseResult<Lhs> lhs = parseLhs(position + 2);
+                final ParseResult<Variable> variable = parseVariable(lhs.nextPosition);
+                assertTokenHereIs(variable.nextPosition, new RightParenToken());
+                return new ParseResult<Lhs>(new AccessLhs(lhs.result,
+                                                          variable.result),
+                                            variable.nextPosition + 1);
+            }
+        } else {
+            throw new ParseException("Unknown lhs: " + token.toString());
+        }
+    } // parseLhs
+    
     public ParseResult<List<Stmt>> parseStmts(final int position) throws ParseException {
         return new Disjunct<Stmt>() {
             public ParseResult<Stmt> parse(final int position) throws ParseException {
@@ -184,11 +217,11 @@ public class Parser {
                                                         exp.result),
                                          exp.nextPosition + 1);
         } else if (token instanceof SingleEqualsToken) {
-            // `(` `=` x exp `)`
-            final ParseResult<Variable> variable = parseVariable(position + 2);
-            final ParseResult<Exp> exp = parseExp(variable.nextPosition);
+            // `(` `=` lhs exp `)`
+            final ParseResult<Lhs> lhs = parseLhs(position + 2);
+            final ParseResult<Exp> exp = parseExp(lhs.nextPosition);
             assertTokenHereIs(exp.nextPosition, new RightParenToken());
-            return new ParseResult<Stmt>(new AssignStmt(variable.result,
+            return new ParseResult<Stmt>(new AssignStmt(lhs.result,
                                                         exp.result),
                                          exp.nextPosition + 1);
         } else if (token instanceof WhileToken) {
@@ -249,17 +282,28 @@ public class Parser {
             }
         }.star().parse(position);
     }
+
+    public ParseResult<Optional<List<Exp>>> parseOptionalSuper(final int position) throws ParseException {
+        // [`(` `super` exp* `)`]
+        return new Disjunct<List<Exp>>() {
+            public ParseResult<List<Exp>> parse(final int position) throws ParseException {
+                assertTokenHereIs(position, new LeftParenToken());
+                assertTokenHereIs(position + 1, new SuperToken());
+                final ParseResult<List<Exp>> exps = parseExps(position + 2);
+                assertTokenHereIs(exps.nextPosition, new RightParenToken());
+                return new ParseResult<List<Exp>>(exps.result, exps.nextPosition + 1);
+            }
+        }.optional().parse(position);
+    }
     
     public ParseResult<ConsDef> parseConsDef(final int position) throws ParseException {
-        // consdef ::= `(` `init` `(` param* `)` `(` `super` exp* `)` stmt `)`
+        // consdef ::= `(` `init` `(` param* `)` [`(` `super` exp* `)`] stmt `)`
         assertTokenHereIs(position, new LeftParenToken());
         assertTokenHereIs(position + 1, new InitToken());
         assertTokenHereIs(position + 2, new LeftParenToken());
         final ParseResult<List<Param>> params = parseParams(position + 3);
         assertTokenHereIs(params.nextPosition, new RightParenToken());
-        assertTokenHereIs(params.nextPosition + 1, new LeftParenToken());
-        assertTokenHereIs(params.nextPosition + 2, new SuperToken());
-        final ParseResult<List<Exp>> superParams = parseExps(params.nextPosition + 3);
+        final ParseResult<Optional<List<Exp>>> superParams = parseOptionalSuper(params.nextPosition + 1);
         assertTokenHereIs(superParams.nextPosition, new RightParenToken());
         final ParseResult<Stmt> stmt = parseStmt(superParams.nextPosition + 1);
         assertTokenHereIs(stmt.nextPosition, new RightParenToken());
@@ -278,16 +322,20 @@ public class Parser {
     }
     
     public ParseResult<ClassDef> parseClassDef(final int position) throws ParseException {
-        // classdef ::= `(` `class` cls [cls] consdef methoddef* `)`
+        // `(` `class` cls [cls] `(` param* `)` consdef methoddef* `)`
         assertTokenHereIs(position, new LeftParenToken());
         assertTokenHereIs(position + 1, new ClassToken());
         final ParseResult<ClassName> className = parseClassName(position + 2);
         final ParseResult<Optional<ClassName>> extendsName = parseOptionalClassName(className.nextPosition);
-        final ParseResult<ConsDef> consDef = parseConsDef(extendsName.nextPosition);
+        assertTokenHereIs(extendsName.nextPosition, new LeftParenToken());
+        final ParseResult<List<Param>> instanceVariables = parseParams(extendsName.nextPosition + 1);
+        assertTokenHereIs(instanceVariables.nextPosition, new RightParenToken());
+        final ParseResult<ConsDef> consDef = parseConsDef(instanceVariables.nextPosition + 1);
         final ParseResult<List<MethodDef>> methodDefs = parseMethodDefs(consDef.nextPosition);
         assertTokenHereIs(methodDefs.nextPosition, new RightParenToken());
         return new ParseResult<ClassDef>(new ClassDef(className.result,
                                                       extendsName.result,
+                                                      instanceVariables.result,
                                                       consDef.result,
                                                       methodDefs.result),
                                          methodDefs.nextPosition + 1);

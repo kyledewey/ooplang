@@ -1,14 +1,15 @@
 package ooplang.parser;
 
 import java.util.List;
+import java.util.Optional;
 
 public class ConsDef {
     public final List<Param> params;
-    public final List<Exp> exps;
+    public final Optional<List<Exp>> exps; // super params
     public final Stmt stmt;
 
     public ConsDef(final List<Param> params,
-                   final List<Exp> exps,
+                   final Optional<List<Exp>> exps,
                    final Stmt stmt) {
         this.params = params;
         this.exps = exps;
