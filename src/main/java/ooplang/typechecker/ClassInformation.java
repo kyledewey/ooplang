@@ -2,13 +2,16 @@ package ooplang.typechecker;
 
 import ooplang.parser.ClassName;
 import ooplang.parser.ClassDef;
-import ooplang.parser.MethodSignature;
 import ooplang.parser.MethodDef;
 import ooplang.parser.Variable;
 import ooplang.parser.Type;
+import ooplang.parser.Param;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 // Need to record:
 // - Methods on a class (mapping signature to definition)
@@ -17,20 +20,53 @@ import java.util.HashMap;
 // - Instance variables on a class (mapping variable to type)
 //     - The class we are inheriting this instance variable from
 public class ClassInformation {
-    private final Map<ClassName, Map<MethodSignature, MethodInformation>> methods;
-    private final Map<ClassName, Map<Variable, InstanceVariableInformation>> instanceVariables;
+    private final Map<ClassName, SingleClassInformation> classes;
 
-    public class ClassInformation() {
-        methods = new HashMap<ClassName, Map<MethodSignature, MethodInformation>>();
-        instanceVariables = new HashMap<ClassName, Map<Variable, InstanceVariableInformation>>();
+    public ClassInformation(final List<ClassDef> classList) throws TypeErrorException {
+        classes = new HashMap<ClassName, SingleClassInformation>();
+        addClasses(classList);
     }
 
-    public boolean classExists(final ClassName className) {
-        final boolean retval = methods.containsKey(className);
-        assert(retval == instanceVariables.containsKey(className));
-        return retval;
-    }
+    public SingleClassInformation getClass(final ClassName className) throws TypeErrorException {
+        final SingleClassInformation retval = classes.get(className);
+        if (retval == null) {
+            throw new TypeErrorException("No such class: " + className.toString());
+        } else {
+            return retval;
+        }
+    } // getClass
+
+    public MethodDef getMethod(final ClassName target,
+                               final MethodSignature signature) throws TypeErrorException {
+        final MethodInformation info = getClass(target).methods.get(signature);
+        if (info == null) {
+            throw new TypeErrorException("No such method on class " +
+                                         target.toString() +
+                                         " with signature " +
+                                         signature.toString());
+        } else {
+            return info.methodDef;
+        }
+    } // getMethod
+
+    public Type typeofField(final ClassName className,
+                            final Variable fieldName) throws TypeErrorException {
+        final InstanceVariableInformation info =
+            getClass(className).instanceVariables.get(fieldName);
+        if (info == null) {
+            throw new TypeErrorException("No such field " +
+                                         fieldName.toString() +
+                                         " on class " +
+                                         className.toString());
+        } else {
+            return info.type;
+        }
+    } // typeofField
     
+    public boolean classExists(final ClassName className) {
+        return classes.containsKey(className);
+    } // classExists
+
     // all classes that it extends must be added first
     private void addClass(final ClassDef classDef) throws TypeErrorException {
         final ClassName myName = classDef.className;
@@ -46,14 +82,10 @@ public class ClassInformation {
         // add on inherited things
         if (classDef.extendsName.isPresent()) {
             final ClassName superName = classDef.extendsName.get();
-            final Map<MethodSignature, MethodInformation> parentMethods =
-                methods.get(superName);
-            final Map<Variable, InstanceVariableInformation> parentInstanceVariables =
-                instanceVariables.get(superName);
-            assert(parentMethods != null);
-            assert(parentInstanceVariables != null);
-            myMethods.putAll(parentMethods);
-            myInstanceVariables.putAll(parentInstanceVariables);
+            final SingleClassInformation parent = classes.get(superName);
+            assert(parent != null);
+            myMethods.putAll(parent.methods);
+            myInstanceVariables.putAll(parent.instanceVariables);
         }
 
         // add methods we define
@@ -73,7 +105,7 @@ public class ClassInformation {
             if (existingMethod == null) {
                 // whole new method
                 myMethods.put(signature,
-                              new MethodInformation(methodDef.methodName,
+                              new MethodInformation(methodDef,
                                                     myName,
                                                     myName));
             } else {
@@ -81,7 +113,7 @@ public class ClassInformation {
                 // make sure the return type is the same
                 if (methodDef.returnType.equals(existingMethod.methodDef.returnType)) {
                     myMethods.put(signature,
-                                  new MethodInformation(methodDef.methodName,
+                                  new MethodInformation(methodDef,
                                                         existingMethod.originalDefiner,
                                                         myName));
                 } else {
@@ -103,9 +135,11 @@ public class ClassInformation {
             }
         } // for each instance variable
         
-        // save to the ClassInformation
-        methods.put(myName, myMethods);
-        instanceVariables.put(myName, myInstanceVariables);
+        // save it
+        classes.put(myName,
+                    new SingleClassInformation(classDef,
+                                               myMethods,
+                                               myInstanceVariables));
     } // addClass
 
     // adds parent classes too
@@ -126,9 +160,56 @@ public class ClassInformation {
         }
     } // transitivelyAddClass
                 
-    public void addClasses(final Map<ClassName, ClassDef> classes) {
+    private void addClasses(final Map<ClassName, ClassDef> classes) throws TypeErrorException {
         for (final ClassDef classDef : classes.values()) {
             transitivelyAddClass(classes, classDef);
         }
+    } // addClasses
+
+    // adds all the superclasses of the given class to supers
+    public static void superClasses(final Map<ClassName, ClassDef> classes,
+                                    final Set<ClassName> supers,
+                                    final ClassName forClass) throws TypeErrorException {
+        supers.add(forClass);
+        final ClassDef classDef = classes.get(forClass);
+        if (classDef == null) {
+            throw new TypeErrorException("No such class: " + forClass.toString());
+        } else if (classDef.extendsName.isPresent()) {
+            final ClassName superClass = classDef.extendsName.get();
+            if (supers.contains(superClass)) {
+                throw new TypeErrorException("Cyclic inheritance involving: " + forClass.toString());
+            } else {
+                superClasses(classes, supers, superClass);
+            }
+        }
+    } // superClasses
+
+    // gets all superclasses of the given class
+    // throws an exception on cyclic inheritance
+    public static Set<ClassName> superClasses(final Map<ClassName, ClassDef> classes,
+                                              final ClassName forClass) throws TypeErrorException {
+        final Set<ClassName> retval = new HashSet<ClassName>();
+        superClasses(classes, retval, forClass);
+        return retval;
+    } // superClasses
+
+    public static void assertNoCyclicInheritance(final Map<ClassName, ClassDef> classes) throws TypeErrorException {
+        for (final ClassName className : classes.keySet()) {
+            superClasses(classes, className);
+        }
+    } // assertNoCyclicInheritance
+
+    private void addClasses(final List<ClassDef> classes) throws TypeErrorException {
+        final Map<ClassName, ClassDef> classMap = new HashMap<ClassName, ClassDef>();
+        for (final ClassDef classDef : classes) {
+            if (!classMap.containsKey(classDef.className)) {
+                classMap.put(classDef.className, classDef);
+            } else {
+                throw new TypeErrorException("Class with duplicate name: " +
+                                             classDef.className.toString());
+            }
+        }
+        assertNoCyclicInheritance(classMap);
+        addClasses(classMap);
     } // addClasses
 } // ClassInformation

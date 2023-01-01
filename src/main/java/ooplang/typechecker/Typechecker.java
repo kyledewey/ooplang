@@ -22,169 +22,12 @@ public class Typechecker {
         }};
     
     private final Program program;
-    private final Map<ClassName, ClassDef> classes;
-    // Need to record:
-    // - Methods on a class (mapping signature to definition)
-    //     - The class that originally introduced the method
-    //     - The class we are inheriting this methoed from
-    // - Instance variables on a class (mapping variable to type)
-    //     - The class we are inheriting this instance variable from
-    private final Map<ClassName, Map<MethodSignature, MethodDef>> classesWithMethods;
-    private final Map<ClassName, Map<Variable, Type>> classesWithInstanceVariables;
-    
-    public void superClasses(final Map<ClassName, ClassDef> classes,
-                             final Set<ClassName> supers,
-                             final ClassName forClass) throws TypeErrorException {
-        supers.add(forClass);
-        final ClassDef classDef = classes.get(forClass);
-        if (classDef == null) {
-            throw new TypeErrorException("No such class: " + forClass.toString());
-        } else if (classDef.extendsName.isPresent()) {
-            final ClassName superClass = classDef.extendsName.get();
-            if (supers.contains(superClass)) {
-                throw new TypeErrorException("Cyclic inheritance involving: " + forClass.toString());
-            } else {
-                superClasses(classes, supers, superClass);
-            }
-        }
-    } // superClasses
-
-    // gets all superclasses of the given class
-    // throws an exception on cyclic inheritance
-    public static Set<ClassName> superClasses(final Map<ClassName, ClassDef> classes,
-                                              final ClassName forClass) throws TypeErrorException {
-        final Set<ClassName> retval = new HashSet<ClassName>();
-        superClasses(classes, retval, forClass);
-    }
-    
-    public static void assertNoCyclicInheritance(final Map<ClassName, ClassDef> classes) throws TypeErrorException {
-        for (final ClassName className : classes.keySet()) {
-            superClasses(classes, className);
-        }
-    }
-    
-    // also fills in the given map
-    public static Inherited allMethodsAndInstanceVariables(final Map<ClassName, Map<MethodSignature, MethodDef>> classesWithMethods,
-                                                           final Map<ClassName, Map<Variable, Type>> allInstanceVariables,
-                                                           final Map<ClassName, ClassDef> onlyClasses,
-                                                           final ClassName forClass) throws TypeErrorException {
-        // See if we've already computed it.
-        // If so, use that.
-        Map<MethodSignature, MethodDef> retvalMethods = classesWithMethods.get(forClass);
-        Map<Variable, Type> retvalInstanceVariables = allInstanceVariables.get(forClass);
-        if (retvalMethods != null) {
-            assert(retvalInstanceVariables != null);
-            return new Inherited(retvalMethods, retvalInstanceVariables);
-        }
-        assert(retvalMethods == null);
-        assert(retvalInstanceVariables == null);
-        
-        // We need to compute it ourselves.
-        // Figure out what we inherited, if anything.
-        final ClassDef classDef = onlyClasses.get(forClass);
-        if (classDef == null) {
-            throw new TypeErrorException("No such class: " + classDef);
-        }
-        retvalMethods = new HashMap<MethodSignature, MethodDef>();
-        retvalInstanceVariables = new HashMap<Variable, Type>();
-        // add everything inherited
-        if (classDef.extendsName.isPresent()) {
-            final Inherited inherited = allMethodsAndInstanceVariables(classWithMethods,
-                                                                       allInstanceVariables,
-                                                                       onlyClasses,
-                                                                       classDef.extendsName.get());
-            retvalMethods.putAll(inherited.methods);
-            retvalInstanceVariables.putAll(inherited.instanceVariables);
-        }
-        // add our own instance variables
-        for (final Param instanceVariable : classDef.instanceVariables) {
-            if (retvalInstanceVariables.containsKey(instanceVariable.variable)) {
-                throw new TypeErrorException("Redeclaration of (possibly inherited) instance variable: " +
-                                             instanceVariable.variable.toString());
-            } else {
-                retvalInstanceVariables.put(instanceVariable.variable, instanceVariable.type);
-            }
-        }
-
-        // add our own methods
-        final Set<MethodSignature> signaturesOnSelf = new HashSet<MethodSignature>();
-        for (final MethodDef methodDef : classDef.methodDefs) {
-            final MethodSignature signature = MethodSignature.getSignature(methodDef);
-            // make sure it's not a duplicate within this class
-            if (signaturesOnSelf.contains(signature)) {
-                throw new TypeErrorException("Duplicate method signature on same class: " +
-                                             signature.toString());
-            } else {
-                signaturesOnSelf.add(signature);
-            }
-
-            // add it, possibly overriding
-            final MethodDef existingDef = retvalMethods.get(signature);
-            if (existingDef == null ||
-                existingDef.returnType.equals(methodDef.returnType)) {
-                retvalMethods.put(signature, methodDef);
-            } else {
-                throw new TypeErrorException("Attempt to change return type: " +
-                                             methodDef.methodName.toString());
-            }
-        }
-
-        // add it to the memo table
-        classesWithMethods.put(forClass, retvalMethods);
-        allInstanceVariables.put(forClass, retvalInstanceVariables);
-
-        return new Inherited(retvalMethods, retvalInstanceVariables);
-    } // allMethodsAndInstanceVariables
-    
+    private final ClassInformation classInformation;
+            
     public Typechecker(final Program program) throws TypeErrorException {
         this.program = program;
-        classes = new HashMap<ClassName, ClassDef>();
-        for (final ClassDef classDef : program.classDefs) {
-            if (!classes.containsKey(classDef.className)) {
-                classes.put(classDef.className, classDef);
-            } else {
-                throw new TypeErrorException("Class with duplicate name: " +
-                                             classDef.className.toString());
-            }
-        }
-        assertNoCyclicInheritance(classes);
-        classesWithMethods = new HashMap<ClassName, Map<MethodSignature, MethodDef>>();
-        classesWithInstanceVariables = new HashMap<ClassName, Map<Variable, Type>>();
-        for (final ClassDef classDef : program.classDefs) {
-            // precompute all methods
-            allMethodsAndInstanceVariables(classesWithMethods,
-                                           classesWithInstanceVariables,
-                                           classes,
-                                           classDef.className);
-        }
-        typecheck();
-    }
-
-    private ClassDef getClass(final ClassName className) throws TypeErrorException {
-        final ClassDef retval = classes.get(className);
-        if (retval == null) {
-            throw new TypeErrorException("No such class: " + className.toString());
-        } else {
-            return retval;
-        }
-    }
-
-    private MethodDef getMethod(final ClassName target,
-                                final MethodSignature signature) throws TypeErrorException {
-        final Map<MethodSignature, MethodDef> methods = classesWithMethods.get(target);
-        if (methods == null) {
-            throw new TypeErrorException("No such class: " + target.toString());
-        } else {
-            final MethodDef method = methods.get(signature);
-            if (method == null) {
-                throw new TypeErrorException("No such method on class " +
-                                             target.toString() +
-                                             " with signature " +
-                                             signature.toString());
-            } else {
-                return method;
-            }
-        }
+        classInformation = new ClassInformation(program.classDefs);
+        typecheckProgram();
     }
     
     private void throwTypeError(final Type expected,
@@ -219,10 +62,10 @@ public class Typechecker {
                 received instanceof ClassType) {
                 // still ok if received is a subtype of expected
                 // get the type of the parent
-                final ClassDef subClass = getClass(((ClassType)received).name);
+                final ClassDef subClass = classInformation.getClass(((ClassType)received).name).classDef;
                 if (subClass.extendsName.isPresent()) {
                     // try up the chain
-                    assertTypesCompatible(expected, new ClassType(subClass.extendsName));
+                    assertTypesCompatible(expected, new ClassType(subClass.extendsName.get()));
                 } else {
                     throwTypeError(expected, received);
                 }
@@ -246,9 +89,9 @@ public class Typechecker {
         for (final Exp param : callExp.exps) {
             paramTypes.add(typeof(param, typeEnv, inClass));
         }
-        final MethodDef methodDef = getMethod(targetAsClassType.name,
-                                              new MethodSignature(callExp.methodName,
-                                                                  paramTypes));
+        final MethodDef methodDef = classInformation.getMethod(targetAsClassType.name,
+                                                               new MethodSignature(callExp.methodName,
+                                                                                   paramTypes));
         return methodDef.returnType;
     } // typeofCall
 
@@ -293,18 +136,29 @@ public class Typechecker {
             } else {
                 throw new TypeErrorException("this used outside of class");
             }
+        } else if (exp instanceof AccessExp) {
+            final AccessExp asAccess = (AccessExp)exp;
+            final Type targetType = typeof(asAccess.exp, typeEnv, inClass);
+            if (targetType instanceof ClassType) {
+                final ClassType asClass = (ClassType)targetType;
+                asAccess.expType = Optional.of(asClass);
+                return classInformation.typeofField(asClass.name, asAccess.variable);
+            } else {
+                throw new TypeErrorException("Can only access a field of a class; found: " +
+                                             targetType.toString());
+            }
         } else if (exp instanceof NewExp) {
             final NewExp asNew = (NewExp)exp;
-            final ClassDef classDef = getClass(exp.className);
-            assertTypesCompatible(getClass(asNew.className).consDef.params,
+            final ClassDef classDef = classInformation.getClass(asNew.className).classDef;
+            assertTypesCompatible(classDef.consDef.params,
                                   asNew.exps,
                                   typeEnv,
                                   inClass);
-            return new ClassType(exp.className);
+            return new ClassType(asNew.className);
         } else if (exp instanceof CallExp) {
             return typeofCall((CallExp)exp, typeEnv, inClass);
         } else if (exp instanceof BinaryOpExp) {
-            return typeoofBin((BinaryOpExp)exp, typeEnv, inClass);
+            return typeofBin((BinaryOpExp)exp, typeEnv, inClass);
         } else {
             assert(false);
             throw new TypeErrorException("Unknown expression: " + exp.toString());
@@ -330,16 +184,39 @@ public class Typechecker {
         return retval;
     }
 
-    private Type fieldType(final ClassName className,
-                           final Variable fieldName) throws TypeErrorException {
-        final Map<Variable, Type> 
     private Type typeofLhs(final Lhs lhs,
-                           final Map<Variable, Type> typeEnv) throws TypeErrorException {
+                           final Map<Variable, Type> typeEnv,
+                           final Optional<ClassName> inClass) throws TypeErrorException {
         if (lhs instanceof VariableLhs) {
             return typeofVariable(typeEnv, ((VariableLhs)lhs).variable);
         } else if (lhs instanceof AccessLhs) {
             final AccessLhs asAccess = (AccessLhs)lhs;
-            final Type lhsType = typeofLhs(
+            final Type lhsType = typeofLhs(asAccess.lhs,
+                                           typeEnv,
+                                           inClass);
+            if (lhsType instanceof ClassType) {
+                final ClassType asClass = (ClassType)lhsType;
+                asAccess.lhsType = Optional.of(asClass);
+                return classInformation.typeofField(asClass.name,
+                                                    asAccess.variable);
+            } else {
+                throw new TypeErrorException("Can only access fields of classes; found: " +
+                                             lhsType.toString());
+            }
+        } else if (lhs instanceof AccessThisLhs) {
+            if (inClass.isPresent()) {
+                final AccessThisLhs asAccess = (AccessThisLhs)lhs;
+                asAccess.targetType = Optional.of(new ClassType(inClass.get()));
+                return classInformation.typeofField(inClass.get(),
+                                                    asAccess.variable);
+            } else {
+                throw new TypeErrorException("Use of this outside of class");
+            }
+        } else {
+            throw new TypeErrorException("Unknown lhs: " + lhs.toString());
+        }
+    } // typeofLhs
+
     // For return:
     // - Need to make sure all paths return
     // - The return itself needs to be of the return type
@@ -359,7 +236,9 @@ public class Typechecker {
                                   false);
         } else if (stmt instanceof AssignStmt) {
             final AssignStmt asAssign = (AssignStmt)stmt;
-            assertTypesCompatible(typeofLhs(typeEnv, asAssign.lhs),
+            assertTypesCompatible(typeofLhs(asAssign.lhs,
+                                            typeEnv,
+                                            inClass),
                                   typeof(asAssign.exp,
                                          typeEnv,
                                          inClass));
@@ -462,7 +341,7 @@ public class Typechecker {
                                              classDef.className.toString());
             }
             // call to super needs to be the same type
-            final ClassDef superClass = getClass(classDef.extendsName.get());
+            final ClassDef superClass = classInformation.getClass(classDef.extendsName.get()).classDef;
             assertTypesCompatible(superClass.consDef.params,
                                   classDef.consDef.exps.get(),
                                   typeEnv,
@@ -498,6 +377,6 @@ public class Typechecker {
     }
     
     public static void typecheck(final Program program) throws TypeErrorException {
-        new Typechecker(program).typecheckProgram();
+        new Typechecker(program); // calls typecheck
     }
 }

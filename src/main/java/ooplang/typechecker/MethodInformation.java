@@ -1,5 +1,8 @@
 package ooplang.typechecker;
 
+import ooplang.parser.MethodDef;
+import ooplang.parser.ClassName;
+
 public class MethodInformation {
     public final MethodDef methodDef;
     public final ClassName originalDefiner;
@@ -9,7 +12,6 @@ public class MethodInformation {
                              final ClassName originalDefiner,
                              final ClassName mostRecentDefiner) {
         this.methodDef = methodDef;
-        this.signature = signature;
         this.originalDefiner = originalDefiner;
         this.mostRecentDefiner = mostRecentDefiner;
     }
@@ -19,7 +21,6 @@ public class MethodInformation {
         if (other instanceof MethodInformation) {
             final MethodInformation asInfo = (MethodInformation)other;
             return (methodDef.equals(asInfo.methodDef) &&
-                    signature.equals(asInfo.signature) &&
                     originalDefiner.equals(asInfo.originalDefiner) &&
                     mostRecentDefiner.equals(asInfo.mostRecentDefiner));
         } else {
@@ -29,9 +30,8 @@ public class MethodInformation {
 
     @Override
     public int hashCode() {
-        return (methodDef.hashCode() &&
-                signature.hashCode() &&
-                originalDefiner.hashCode() &&
+        return (methodDef.hashCode() +
+                originalDefiner.hashCode() +
                 mostRecentDefiner.hashCode());
     }
 
@@ -39,7 +39,6 @@ public class MethodInformation {
     public String toString() {
         return ("MethodInformation(" +
                 methodDef.toString() + ", " +
-                signature.toString() + ", " +
                 originalDefiner.toString() + ", " +
                 mostRecentDefiner.toString() + ")");
     }
