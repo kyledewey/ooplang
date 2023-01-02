@@ -6,6 +6,10 @@ import ooplang.parser.MethodDef;
 import ooplang.parser.ClassName;
 
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 public class SingleClassInformation {
     public final ClassDef classDef;
@@ -20,6 +24,18 @@ public class SingleClassInformation {
         this.instanceVariables = instanceVariables;
     }
 
+    // Gets all the methods that are newly introduced
+    // on this class.  Overridden methods do not count for this.
+    public List<MethodInformation> introducedMethods() {
+        final List<MethodInformation> retval = new ArrayList<MethodInformation>();
+        for (final MethodInformation method : methods.values()) {
+            if (method.originallyDefinedOn(classDef)) {
+                retval.add(method);
+            }
+        }
+        return retval;
+    } // introducedMethods
+                
     @Override
     public boolean equals(final Object other) {
         if (other instanceof SingleClassInformation) {

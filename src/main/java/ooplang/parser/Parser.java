@@ -26,7 +26,7 @@ public class Parser {
         final Token received = getToken(position);
         if (!expected.equals(received)) {
             throw new ParseException("Expected: " + expected.toString() +
-                                     "received: " + received.toString());
+                                     "; received: " + received.toString());
         }
     }
 

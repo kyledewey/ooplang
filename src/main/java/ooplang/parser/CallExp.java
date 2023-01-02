@@ -8,7 +8,8 @@ public class CallExp implements Exp {
     public Optional<ClassType> targetType; // needed for codegen
     public final MethodName methodName;
     public final List<Exp> exps;
-
+    public Optional<List<Type>> expTypes; // needed for codegen
+    
     public CallExp(final Exp target,
                    final MethodName methodName,
                    final List<Exp> exps) {
@@ -16,6 +17,7 @@ public class CallExp implements Exp {
         targetType = Optional.empty();
         this.methodName = methodName;
         this.exps = exps;
+        expTypes = Optional.empty();
     }
 
     @Override
@@ -23,8 +25,10 @@ public class CallExp implements Exp {
         if (other instanceof CallExp) {
             final CallExp asCall = (CallExp)other;
             return (target.equals(asCall.target) &&
+                    targetType.equals(asCall.targetType) &&
                     methodName.equals(asCall.methodName) &&
-                    exps.equals(asCall.exps));
+                    exps.equals(asCall.exps) &&
+                    expTypes.equals(asCall.expTypes));
         } else {
             return false;
         }
@@ -33,7 +37,19 @@ public class CallExp implements Exp {
     @Override
     public int hashCode() {
         return (target.hashCode() +
+                targetType.hashCode() +
                 methodName.hashCode() +
-                exps.hashCode());
+                exps.hashCode() +
+                expTypes.hashCode());
+    }
+
+    @Override
+    public String toString() {
+        return ("CallExp(" +
+                target.toString() + ", " +
+                targetType.toString() + ", " +
+                methodName.toString() + ", " +
+                exps.toString() + ", " +
+                expTypes.toString() + ")");
     }
 }

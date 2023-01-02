@@ -89,9 +89,9 @@ void* _vtable_Mult[] = {
   (void*)&_method_Mult_doOperation
 };
 
-typedef int (*_method_getValue)(struct Operation*);
-typedef char* (*_method_getName)(struct Operation*);
-typedef int (*_method_doOperation)(struct Operation*, int, int);
+typedef int (*_typedef_Operation_getValue)(struct Operation*);
+typedef char* (*_typedef_Operation_getName)(struct Operation*);
+typedef int (*_typedef_Operation_doOperation)(struct Operation*, int, int);
 
 // init assumes that the vtable is already set
 void _init_Object(struct Object* object) {}
@@ -158,23 +158,40 @@ int _method_Mult_doOperation(struct Mult* mult,
   return ((struct Operation*)mult)->value * first * second;
 }
 
+// TODO: for each initial definition of a method, we also need a helper like this
+// This avoids double-evaluation of this, because the expression needs this twice
+int _virtual_Operation_doOperation(struct Operation* this,
+                                   int first,
+                                   int second) {
+  return ((_typedef_Operation_doOperation)((struct Object*)this)->_vtable[2])(this, first, second);
+}
+
+int _virtual_Operation_getValue(struct Operation* this) {
+  return ((_typedef_Operation_getValue)((struct Object*)this)->_vtable[0])(this);
+}
+
+char* _virtual_Operation_getName(struct Operation* this) {
+  return ((_typedef_Operation_getName)((struct Object*)this)->_vtable[1])((struct Operation*)this);
+}
+                                 
+
 int main(int argc, char** argv) {
   // Add add = new Add(2);
   struct Add* add = _new_Add(2);
   // Operation mult = new Mult(3);
   struct Operation* mult = (struct Operation*)_new_Mult(3);
   // print(add.getValue());
-  printf("%i\n", ((_method_getValue)((struct Object*)add)->_vtable[0])((struct Operation*)add));
+  printf("%i\n", _virtual_Operation_getValue((struct Operation*)add));
   // print(add.getName());
-  printf("%s\n", ((_method_getName)((struct Object*)add)->_vtable[1])((struct Operation*)add));
+  printf("%s\n", _virtual_Operation_getName((struct Operation*) add));
   // print(add.doOperation(3, 4));
-  printf("%i\n", ((_method_doOperation)((struct Object*)add)->_vtable[2])((struct Operation*)add, 3, 4));
+  printf("%i\n", _virtual_Operation_doOperation((struct Operation*)add, 3, 4));
   // print(mult.getValue());
-  printf("%i\n", ((_method_getValue)((struct Object*)mult)->_vtable[0])(mult));
+  printf("%i\n", _virtual_Operation_getValue((struct Operation*)mult));
   // print(mult.getName());
-  printf("%s\n", ((_method_getName)((struct Object*)mult)->_vtable[1])(mult));
+  printf("%s\n", _virtual_Operation_getName((struct Operation*)mult));
   // print(mult.doOperation(5, 6));
-  printf("%i\n", ((_method_doOperation)((struct Object*)mult)->_vtable[2])(mult, 3, 4));
+  printf("%i\n", _virtual_Operation_doOperation((struct Operation*) mult, 3, 4));
   return 0;
 }
 

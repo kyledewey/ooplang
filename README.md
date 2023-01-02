@@ -103,3 +103,9 @@ program ::= classdef* stmt
 - ClassDef(ClassName, Optional<ClassName>, List<Param>, ConsDef, List<MethodDef>)
 - MethodDef(Type, MethodName, List<Param>, Stmt)
 - Program(List<ClassDef>, Stmt)
+
+## Running the Code ##
+
+```console
+mvn exec:java -Dexec.mainClass="ooplang.Ooplang" -Dexec.args="examples/progn.ooplang progn.c"
+```

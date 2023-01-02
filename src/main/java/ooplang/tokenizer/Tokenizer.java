@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+
 public class Tokenizer {
     public static final Map<String, Token> RESERVED_WORDS =
         new HashMap<String, Token>() {{
@@ -136,5 +140,9 @@ public class Tokenizer {
     
     public static Token[] tokenize(final String input) throws TokenizerException {
         return new Tokenizer(input).tokenize();
+    }
+
+    public static Token[] tokenize(final File input) throws TokenizerException, IOException {
+        return tokenize(Files.readString(input.toPath()));
     }
 }

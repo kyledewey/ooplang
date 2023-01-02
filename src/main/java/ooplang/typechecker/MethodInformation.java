@@ -1,5 +1,6 @@
 package ooplang.typechecker;
 
+import ooplang.parser.ClassDef;
 import ooplang.parser.MethodDef;
 import ooplang.parser.ClassName;
 
@@ -16,6 +17,14 @@ public class MethodInformation {
         this.mostRecentDefiner = mostRecentDefiner;
     }
 
+    public boolean originallyDefinedOn(final ClassDef classDef) {
+        return originalDefiner.equals(classDef.className);
+    }
+
+    public MethodSignature getSignature() {
+        return MethodSignature.getSignature(methodDef);
+    }
+    
     @Override
     public boolean equals(final Object other) {
         if (other instanceof MethodInformation) {

@@ -27,6 +27,15 @@ public class ClassInformation {
         addClasses(classList);
     }
 
+    public SingleClassInformation baseClass(final ClassName className) throws TypeErrorException {
+        final SingleClassInformation self = getClass(className);
+        if (self.classDef.extendsName.isPresent()) {
+            return baseClass(self.classDef.extendsName.get());
+        } else {
+            return self;
+        }
+    } // baseClass
+    
     public SingleClassInformation getClass(final ClassName className) throws TypeErrorException {
         final SingleClassInformation retval = classes.get(className);
         if (retval == null) {
@@ -38,6 +47,11 @@ public class ClassInformation {
 
     public MethodDef getMethod(final ClassName target,
                                final MethodSignature signature) throws TypeErrorException {
+        return getMethodInformation(target, signature).methodDef;
+    } // getMethod
+    
+    public MethodInformation getMethodInformation(final ClassName target,
+                                                  final MethodSignature signature) throws TypeErrorException {
         final MethodInformation info = getClass(target).methods.get(signature);
         if (info == null) {
             throw new TypeErrorException("No such method on class " +
@@ -45,9 +59,9 @@ public class ClassInformation {
                                          " with signature " +
                                          signature.toString());
         } else {
-            return info.methodDef;
+            return info;
         }
-    } // getMethod
+    } // getMethodInformation
 
     public Type typeofField(final ClassName className,
                             final Variable fieldName) throws TypeErrorException {

@@ -29,6 +29,10 @@ public class Typechecker {
         classInformation = new ClassInformation(program.classDefs);
         typecheckProgram();
     }
+
+    public ClassInformation getClassInformation() {
+        return classInformation;
+    }
     
     private void throwTypeError(final Type expected,
                                 final Type received) throws TypeErrorException {
@@ -92,6 +96,7 @@ public class Typechecker {
         final MethodDef methodDef = classInformation.getMethod(targetAsClassType.name,
                                                                new MethodSignature(callExp.methodName,
                                                                                    paramTypes));
+        callExp.expTypes = Optional.of(paramTypes);
         return methodDef.returnType;
     } // typeofCall
 
@@ -262,7 +267,7 @@ public class Typechecker {
                     throw new TypeErrorException("Dead code: " + curStmt.toString());
                 } else {
                     final StmtResult res = typecheckStmt(curStmt,
-                                                         typeEnv,
+                                                         env,
                                                          inClass,
                                                          returnType);
                     env = res.typeEnv;
@@ -271,11 +276,13 @@ public class Typechecker {
             }
             return new StmtResult(typeEnv, returned);
         } else if (stmt instanceof PrintStmt) {
-            final Type type = typeof(((PrintStmt)stmt).exp,
+            final PrintStmt asPrint = (PrintStmt)stmt;
+            final Type type = typeof(asPrint.exp,
                                      typeEnv,
                                      inClass);
             if (type instanceof IntType ||
                 type instanceof BoolType) {
+                asPrint.expType = Optional.of(type);
                 return new StmtResult(typeEnv, false);
             } else {
                 throw new TypeErrorException("Cannot print type " + type.toString());
@@ -376,7 +383,7 @@ public class Typechecker {
                       Optional.empty());
     }
     
-    public static void typecheck(final Program program) throws TypeErrorException {
-        new Typechecker(program); // calls typecheck
+    public static ClassInformation typecheck(final Program program) throws TypeErrorException {
+        return new Typechecker(program).getClassInformation();
     }
 }
