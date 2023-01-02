@@ -152,7 +152,9 @@ public class Codegen {
         dest.append(typeToString(stmt.type));
         dest.append(" ");
         dest.append(stmt.variable.name);
-        dest.append(" = ");
+        dest.append(" = (");
+        dest.append(typeToString(stmt.type));
+        dest.append(")");
         handleExp(stmt.exp, dest);
         dest.append(";\n");
     } // handleVardecStmt
