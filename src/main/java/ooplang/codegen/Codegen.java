@@ -123,7 +123,7 @@ public class Codegen {
         final String structHeader =
             "struct " + classDef.className.name;
         structPrototypes.append(structHeader);
-        structPrototypes.append(";");
+        structPrototypes.append(";\n");
         structs.append(structHeader);
         structs.append(" {\n");
         if (classDef.extendsName.isPresent()) {
