@@ -595,8 +595,9 @@ public class Codegen {
         for (final ClassDef classDef : program.classDefs) {
             handleClass(classDef);
         }
-        methods.append("int main() {\n");
+        main.append("int main() {\n");
         handleStmt(program.entryPoint, main);
+        main.append("}\n");
     } // handleProgram
 
     public void writeProgram(final File outputFile) throws IOException {
