@@ -1,0 +1,20 @@
+(class IntWrapper
+  ((int value))
+  (init ((int value))
+    (= (. this value) value)))
+
+(class Overloading
+  ()
+  (init () (progn))
+  (method int toInt ((int value))
+    (return value))
+  (method int toInt ((bool value))
+    (if value (return 1) (return 0)))
+  (method int toInt ((IntWrapper wrapper))
+    (return (. wrapper value))))
+
+(progn
+  (vardec Overloading obj (new Overloading))
+  (print (call obj toInt 7))
+  (print (call obj toInt false))
+  (print (call obj toInt (new IntWrapper 3))))
