@@ -1,5 +1,11 @@
 # OOPLang #
 
+## Features ##
+
+- Class-based inheritance
+- Subtyping
+- Method overloading
+
 ## Syntax ##
 
 ```
