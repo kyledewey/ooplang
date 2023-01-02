@@ -304,8 +304,7 @@ public class Parser {
         final ParseResult<List<Param>> params = parseParams(position + 3);
         assertTokenHereIs(params.nextPosition, new RightParenToken());
         final ParseResult<Optional<List<Exp>>> superParams = parseOptionalSuper(params.nextPosition + 1);
-        assertTokenHereIs(superParams.nextPosition, new RightParenToken());
-        final ParseResult<Stmt> stmt = parseStmt(superParams.nextPosition + 1);
+        final ParseResult<Stmt> stmt = parseStmt(superParams.nextPosition);
         assertTokenHereIs(stmt.nextPosition, new RightParenToken());
         return new ParseResult<ConsDef>(new ConsDef(params.result,
                                                     superParams.result,
