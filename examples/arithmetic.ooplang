@@ -1,0 +1,54 @@
+(class Exp
+  ()
+  (init () (progn))
+  (method int evaluate ()
+    (return 0)))
+(class Op
+  ()
+  (init () (progn))
+  (method int evaluate ((int first) (int second))
+    (return 0)))
+(class PlusOp Op
+  ()
+  (init () (super) (progn))
+  (method int evaluate ((int first) (int second))
+    (return (+ first second))))
+(class MultOp Op
+  ()
+  (init () (super) (progn))
+  (method int evaluate ((int first) (int second))
+    (return (* first second))))
+
+(class IntLiteralExp Exp
+  ((int value))
+  (init ((int value))
+    (super)
+    (= (. this value) value))
+  (method int evaluate ()
+    (return (. this value))))
+(class OpExp Exp
+  ((Exp left)
+   (Op op)
+   (Exp right))
+  (init ((Exp left)
+         (Op op)
+         (Exp right))
+    (super)
+    (progn
+      (= (. this left) left)
+      (= (. this op) op)
+      (= (. this right) right)))
+  (method int evaluate ()
+    (return (call (. this op) evaluate
+              (call (. this left) evaluate)
+              (call (. this right) evaluate)))))
+(progn
+  (vardec Exp three (new IntLiteralExp 3))
+  (vardec Exp four (new IntLiteralExp 4))
+  (vardec Exp five (new IntLiteralExp 5))
+  (vardec Exp fourTimesFive
+    (new OpExp four (new MultOp) five))
+  (vardec Exp threePlusFourTimesFive
+    (new OpExp three (new PlusOp) fourTimesFive))
+  (print (call threePlusFourTimesFive evaluate)))
+
