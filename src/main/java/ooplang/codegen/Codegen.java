@@ -122,7 +122,9 @@ public class Codegen {
     private void handleClassStruct(final ClassDef classDef) throws CodegenException {
         final String structHeader =
             "struct " + classDef.className.name;
-        structPrototypes.append(structHeader + ";");
+        structPrototypes.append(structHeader);
+        structPrototypes.append(";");
+        structs.append(structHeader);
         structs.append(" {\n");
         if (classDef.extendsName.isPresent()) {
             structs.append("  struct ");
@@ -319,7 +321,7 @@ public class Codegen {
                          methodInfo.originalDefiner,
                          signature,
                          dest);
-        dest.append("(struct ");
+        dest.append("((struct ");
         dest.append(methodInfo.originalDefiner.name);
         dest.append("*)");
         handleExp(exp.target, dest);
@@ -419,6 +421,7 @@ public class Codegen {
         header.append(thisType);
         header.append(" _new_");
         header.append(classDef.className.name);
+        header.append("(");
         int numParamsLeft = classDef.consDef.params.size();
         for (final Param param : classDef.consDef.params) {
             header.append(paramToString(param));
@@ -437,7 +440,7 @@ public class Codegen {
         newFunctions.append(thisType);
         newFunctions.append(")malloc(sizeof(struct ");
         newFunctions.append(classDef.className.name);
-        newFunctions.append("));\n");
+        newFunctions.append("));\n  ");
         final SingleClassInformation base =
             classInformation.baseClass(classDef.className);
         newFunctions.append(cast(base.classDef.className, "this"));
@@ -453,7 +456,7 @@ public class Codegen {
         newFunctions.append("(this");
         for (final Param param : classDef.consDef.params) {
             newFunctions.append(", ");
-            newFunctions.append(paramToString(param));
+            newFunctions.append(param.variable.name);
         }
         newFunctions.append(");\n  return this;\n}\n");
     } // handleClassConstructorNew
@@ -521,6 +524,7 @@ public class Codegen {
                          header);
         header.append("(");
         header.append(typeToString(new ClassType(classDef.className)));
+        header.append(" this");
         for (final Param param : methodDef.params) {
             header.append(", ");
             header.append(paramToString(param));
@@ -546,6 +550,8 @@ public class Codegen {
         for (final MethodInformation method : introducedMethods(classDef)) {
             final MethodSignature signature = method.getSignature();
             final StringBuffer header = new StringBuffer();
+            header.append(typeToString(method.methodDef.returnType));
+            header.append(" ");
             handleMethodName("virtual",
                              classDef.className,
                              signature,
@@ -582,9 +588,9 @@ public class Codegen {
     } // handleVirtualFunctions
     
     private void handleClass(final ClassDef classDef) throws TypeErrorException, CodegenException {
+        handleClassStruct(classDef);
         handleClassVTable(classDef);
         handleClassConstructor(classDef);
-        handleClassVTable(classDef);
         handleClassTypedefs(classDef);
         handleMethods(classDef);
         handleVirtualFunctions(classDef);

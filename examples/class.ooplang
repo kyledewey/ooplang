@@ -2,8 +2,8 @@
   ((int value))
   (init ((int value))
     (= (. this value) value))
-  (method getValue ()
+  (method int getValue ()
     (return (. this value))))
 (progn
-  (vardec HoldsInt obj (new HoldsInt (5)))
-  (print (call obj getValue ())))
+  (vardec HoldsInt obj (new HoldsInt 5))
+  (print (call obj getValue)))
