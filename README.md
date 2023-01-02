@@ -107,5 +107,5 @@ program ::= classdef* stmt
 ## Running the Code ##
 
 ```console
-mvn exec:java -Dexec.mainClass="ooplang.Ooplang" -Dexec.args="examples/progn.ooplang progn.c"
+mvn exec:java -Dexec.mainClass="ooplang.Ooplang" -Dexec.args="examples/class.ooplang class.c"
 ```

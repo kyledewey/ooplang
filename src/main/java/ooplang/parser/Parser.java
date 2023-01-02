@@ -177,7 +177,7 @@ public class Parser {
         } else if (token instanceof LeftParenToken) {
             assertTokenHereIs(position + 1, new DotToken());
             final Token nextToken = getToken(position + 2);
-            if (token instanceof ThisToken) {
+            if (nextToken instanceof ThisToken) {
                 final ParseResult<Variable> variable = parseVariable(position + 3);
                 assertTokenHereIs(variable.nextPosition, new RightParenToken());
                 return new ParseResult<Lhs>(new AccessThisLhs(variable.result),
