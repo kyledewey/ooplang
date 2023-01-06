@@ -2,7 +2,7 @@
 #include "stdlib.h"
 
 // class Object {}
-// class Operation extends Object {
+// abstract class Operation extends Object {
 //   int value;
 //   Operation(int value) {
 //     super();
@@ -104,14 +104,14 @@ struct Object* _new_Object() {
   return retval;
 }
 
-void _init_Operation(struct Operation* operation,
+void _init_Operation(struct Operation* this,
                      int value) {
-  _init_Object((struct Object*)operation);
-  operation->value = value;
+  _init_Object((struct Object*)this);
+  this->value = value;
 }
 
-void _init_Add(struct Add* add, int value) {
-  _init_Operation((struct Operation*)add, value);
+void _init_Add(struct Add* this, int value) {
+  _init_Operation((struct Operation*)this, value);
 }
 
 struct Add* _new_Add(int value) {
@@ -122,8 +122,8 @@ struct Add* _new_Add(int value) {
   return retval;
 }
 
-void _init_Mult(struct Mult* mult, int value) {
-  _init_Operation((struct Operation*)mult, value);
+void _init_Mult(struct Mult* this, int value) {
+  _init_Operation((struct Operation*)this, value);
 }
 
 struct Mult* _new_Mult(int value) {
@@ -134,35 +134,35 @@ struct Mult* _new_Mult(int value) {
   return retval;
 }
 
-int _method_Operation_getValue(struct Operation* op) {
-  return op->value;
+int _method_Operation_getValue(struct Operation* this) {
+  return this->value;
 }
 
-char* _method_Add_getName(struct Add* add) {
+char* _method_Add_getName(struct Add* this) {
   return "add";
 }
 
-int _method_Add_doOperation_int_int(struct Add* add,
-                            int first,
-                            int second) {
-  return ((struct Operation*)add)->value + first + second;
+int _method_Add_doOperation_int_int(struct Add* this,
+                                    int first,
+                                    int second) {
+  return ((struct Operation*)this)->value + first + second;
 }
 
-char* _method_Mult_getName(struct Mult* mult) {
+char* _method_Mult_getName(struct Mult* this) {
   return "mult";
 }
 
-int _method_Mult_doOperation_int_int(struct Mult* mult,
-                             int first,
-                             int second) {
-  return ((struct Operation*)mult)->value * first * second;
+int _method_Mult_doOperation_int_int(struct Mult* this,
+                                     int first,
+                                     int second) {
+  return ((struct Operation*)this)->value * first * second;
 }
 
-// TODO: for each initial definition of a method, we also need a helper like this
+// for each initial definition of a method, we also need a helper like this
 // This avoids double-evaluation of this, because the expression needs this twice
 int _virtual_Operation_doOperation_int_int(struct Operation* this,
-                                   int first,
-                                   int second) {
+                                           int first,
+                                           int second) {
   return ((_typedef_Operation_doOperation_int_int)((struct Object*)this)->_vtable[2])(this, first, second);
 }
 
@@ -171,7 +171,7 @@ int _virtual_Operation_getValue(struct Operation* this) {
 }
 
 char* _virtual_Operation_getName(struct Operation* this) {
-  return ((_typedef_Operation_getName)((struct Object*)this)->_vtable[1])((struct Operation*)this);
+  return ((_typedef_Operation_getName)((struct Object*)this)->_vtable[1])(this);
 }
                                  
 
