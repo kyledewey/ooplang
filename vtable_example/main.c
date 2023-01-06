@@ -64,11 +64,11 @@ void _init_Mult(struct Mult* mult, int value);
 struct Mult* _new_Mult(int value);
 int _method_Operation_getValue(struct Operation* op);
 char* _method_Add_getName(struct Add* add);
-int _method_Add_doOperation(struct Add* add,
+int _method_Add_doOperation_int_int(struct Add* add,
                             int first,
                             int second);
 char* _method_Mult_getName(struct Mult* mult);
-int _method_Mult_doOperation(struct Mult* mult,
+int _method_Mult_doOperation_int_int(struct Mult* mult,
                              int first,
                              int second);
 int main(int argc, char** argv);
@@ -81,17 +81,17 @@ void* _vtable_Operation[] = {
 void* _vtable_Add[] = {
   (void*)&_method_Operation_getValue,
   (void*)&_method_Add_getName,
-  (void*)&_method_Add_doOperation
+  (void*)&_method_Add_doOperation_int_int
 };
 void* _vtable_Mult[] = {
   (void*)&_method_Operation_getValue,
   (void*)&_method_Mult_getName,
-  (void*)&_method_Mult_doOperation
+  (void*)&_method_Mult_doOperation_int_int
 };
 
 typedef int (*_typedef_Operation_getValue)(struct Operation*);
 typedef char* (*_typedef_Operation_getName)(struct Operation*);
-typedef int (*_typedef_Operation_doOperation)(struct Operation*, int, int);
+typedef int (*_typedef_Operation_doOperation_int_int)(struct Operation*, int, int);
 
 // init assumes that the vtable is already set
 void _init_Object(struct Object* object) {}
@@ -142,7 +142,7 @@ char* _method_Add_getName(struct Add* add) {
   return "add";
 }
 
-int _method_Add_doOperation(struct Add* add,
+int _method_Add_doOperation_int_int(struct Add* add,
                             int first,
                             int second) {
   return ((struct Operation*)add)->value + first + second;
@@ -152,7 +152,7 @@ char* _method_Mult_getName(struct Mult* mult) {
   return "mult";
 }
 
-int _method_Mult_doOperation(struct Mult* mult,
+int _method_Mult_doOperation_int_int(struct Mult* mult,
                              int first,
                              int second) {
   return ((struct Operation*)mult)->value * first * second;
@@ -160,10 +160,10 @@ int _method_Mult_doOperation(struct Mult* mult,
 
 // TODO: for each initial definition of a method, we also need a helper like this
 // This avoids double-evaluation of this, because the expression needs this twice
-int _virtual_Operation_doOperation(struct Operation* this,
+int _virtual_Operation_doOperation_int_int(struct Operation* this,
                                    int first,
                                    int second) {
-  return ((_typedef_Operation_doOperation)((struct Object*)this)->_vtable[2])(this, first, second);
+  return ((_typedef_Operation_doOperation_int_int)((struct Object*)this)->_vtable[2])(this, first, second);
 }
 
 int _virtual_Operation_getValue(struct Operation* this) {
@@ -185,13 +185,13 @@ int main(int argc, char** argv) {
   // print(add.getName());
   printf("%s\n", _virtual_Operation_getName((struct Operation*) add));
   // print(add.doOperation(3, 4));
-  printf("%i\n", _virtual_Operation_doOperation((struct Operation*)add, 3, 4));
+  printf("%i\n", _virtual_Operation_doOperation_int_int((struct Operation*)add, 3, 4));
   // print(mult.getValue());
   printf("%i\n", _virtual_Operation_getValue((struct Operation*)mult));
   // print(mult.getName());
   printf("%s\n", _virtual_Operation_getName((struct Operation*)mult));
   // print(mult.doOperation(5, 6));
-  printf("%i\n", _virtual_Operation_doOperation((struct Operation*) mult, 3, 4));
+  printf("%i\n", _virtual_Operation_doOperation_int_int((struct Operation*) mult, 3, 4));
   return 0;
 }
 
